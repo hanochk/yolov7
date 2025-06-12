@@ -200,8 +200,11 @@ def range_p_r_bar_plot(n_bins:int, range_bins_precision_all_classes:dict, range_
         x = 100 * np.arange(n_bins) + 100
         for (k_p, v_p), (k_r, v_r) in zip(range_bins_precision_all_classes.items(), range_bins_recall_all_classes.items()):
             plt.figure()
-            bar1 = plt.bar(x-bar_width , [x[class_graph] for x in v_p[:n_bins]], bar_width, color='b', label='p')
-            bar2 = plt.bar(x-bar_width//2 , [x[class_graph] for x in v_r[:n_bins]], bar_width, color='g', label='r')
+            try:
+                bar1 = plt.bar(x-bar_width , [x[class_graph] for x in v_p[:n_bins]], bar_width, color='b', label='p')
+                bar2 = plt.bar(x-bar_width//2 , [x[class_graph] for x in v_r[:n_bins]], bar_width, color='g', label='r')
+            except Exception as e:
+                print(f'pycocotools unable to run: {e}')
 
             plt.xticks(x, (x/100).astype('int'))
 
@@ -318,6 +321,7 @@ def plot_pr_curve(px, py, ap, save_dir='pr_curve.png', names=(),
     ax.set_title(tag)
     plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
     fig.savefig(Path(save_dir), dpi=250)
+    plt.close()
 
 
 def plot_mc_curve(px, py, save_dir='mc_curve.png', names=(), xlabel='Confidence', ylabel='Metric'):
@@ -339,3 +343,4 @@ def plot_mc_curve(px, py, save_dir='mc_curve.png', names=(), xlabel='Confidence'
     ax.grid()
     plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
     fig.savefig(Path(save_dir), dpi=250)
+    plt.close()

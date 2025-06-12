@@ -36,6 +36,7 @@ from utils.torch_utils import torch_distributed_zero_first
 # @@HK :  pip install torch==2.3.0 torchvision==0.18.0 torchaudio==2.3.0 resolve h\lib\fbgemm.dll" or one of its dependencies on Windows
 # Parameters
 eps = 1e-5
+check_consistency_labels_meta = True
 import pandas as pd
 def flatten(lst): return [x for l in lst for x in l]
 
@@ -696,6 +697,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 del self.labels[ix]
                 del self.img_files[ix]
                 del self.label_files[ix]
+                print(self.label_files[ix])
                 del shapes[ix]
 
         print('after',               len(self.labels))
@@ -756,6 +758,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             pbar.close()
 
         if self.use_csv_meta_data_file:
+            labels_file_names = [x.split('/')[-1] for x in self.label_files]
+
             df = load_csv_xls_2_df(self.csv_meta_data_file)
             self.df_metadata = pd.DataFrame(columns=['sensor_type', 'part_in_day', 'weather_condition', 'country', 'train_state', 'tir_frame_image_file_name'])
             # TODO :HK @@ itereate         tqdm(zip(self.img_files, self.label_files) and upon --force-csv-list remove missing entries from the csv in train/test lists!!!
@@ -770,6 +774,26 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                                                          df[df['tir_frame_image_file_name'] == file_name]['country'].item(),
                                                          df[df['tir_frame_image_file_name'] == file_name]['train_state'].item(),
                                                          df[df['tir_frame_image_file_name'] == file_name]['tir_frame_image_file_name'].item()]
+                    if check_consistency_labels_meta:
+                        n_objects_in_img = df[df['tir_frame_image_file_name'] == file_name].Person.item() + \
+                                           df[df['tir_frame_image_file_name'] == file_name].Car.item() + \
+                                           df[df['tir_frame_image_file_name'] == file_name].Worker.item()+\
+                                           df[df['tir_frame_image_file_name'] == file_name].Locomotive.item() +\
+                                           df[df['tir_frame_image_file_name'] == file_name].Train.item()
+
+                        entry_in_labels_list = labels_file_names.index(
+                            df[df['tir_frame_image_file_name'] == file_name]['tir_frame_label_file_name'].item())
+                        n_labesl_in_label_file = len(self.labels[entry_in_labels_list])
+
+                        if n_labesl_in_label_file != n_objects_in_img:
+                            print('Discrepancy between num objects in metadata xlsx and annotation file', file_name, n_labesl_in_label_file, n_objects_in_img)
+                            print(self.labels[entry_in_labels_list])
+                            print(df[df['tir_frame_image_file_name'] == file_name].Person.item(),'Person')
+                            print(df[df['tir_frame_image_file_name'] == file_name].Car.item(), 'Car')
+                            print(df[df['tir_frame_image_file_name'] == file_name].Worker.item(),'Worker')
+                            print(df[df['tir_frame_image_file_name'] == file_name].Locomotive.item(), 'Locomotive')
+                            print(df[df['tir_frame_image_file_name'] == file_name].Train.item(), 'Train')
+
                 except Exception as e:
                     print(f'{fname} fname WARNING: Ignoring corrupted image and/or label {file_name}: {e}')
 

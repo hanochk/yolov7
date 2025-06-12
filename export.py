@@ -1,3 +1,4 @@
+
 import argparse
 import sys
 import time
@@ -315,5 +316,9 @@ None instead 640 not taking the TRT but ORT (nms of NVIDIA)
 # reorder outputs
 
 --include-nms --device 0 --weights /mnt/Data/hanoch/runs/train/yolov7999/weights/best.pt --batch-size 1 --end2end --grid --conf-thres 0.1 --iou-thres 0.6 --simplify --max-wh 640 --reorder-output-class-to-viz-od
+
+# 3 classes 
+/mnt/Data/hanoch/runs/train/yolov71351/weights/epoch_049.pt
+--include-nms --device 0 --weights /mnt/Data/hanoch/runs/train/yolov71351/weights/epoch_049.pt --batch-size 1 --end2end --grid --conf-thres 0.1 --iou-thres 0.6 --simplify --max-wh 640 --reorder-output-class-to-viz-od
 
 """
