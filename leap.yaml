@@ -1,5 +1,5 @@
-codeIntegrationId: 6578814989e0b70012ac5180
-projectId: 6578814289e0b70012ac517c
+codeIntegrationId:
+projectId:
 secretId: ""
 entryFile: leap_binder.py
 include:
@@ -18,3 +18,6 @@ include:
     - leap_utils.py
     - leapcfg/*
     - requirements.txt
+    - YOLOv7onnx.py
+    - leap_mapping.yaml
+pythonVersion: py310

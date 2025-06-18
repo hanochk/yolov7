@@ -694,10 +694,10 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             print('Remove missing annotations file avoiding unlabeled images that would considered as BG. Before', len(self.labels))
         for ix  in range(len(self.labels) - 1, -1, -1): # safe remove by reverrse iteration #enumerate(self.labels):
             if (self.labels[ix][:, 1:] > 1).any() or self.labels[ix].size < 5:
+                print(self.label_files[ix])
                 del self.labels[ix]
                 del self.img_files[ix]
                 del self.label_files[ix]
-                print(self.label_files[ix])
                 del shapes[ix]
 
         print('after',               len(self.labels))

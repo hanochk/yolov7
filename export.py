@@ -233,14 +233,16 @@ if __name__ == '__main__':
         print("onnx:")
         print(img.shape)
 
+        opset_version = 12 #14
         if opt.reorder_output_class_to_viz_od:
             fname = os.path.join(os.path.dirname(fname), os.path.basename(fname).split('onnx')[0] + 'person_cls_0.onnx')
 
-        torch.onnx.export(model, img, fname, verbose=False, opset_version=12, input_names=['images'],
+        torch.onnx.export(model, img, fname, verbose=False, opset_version=opset_version, input_names=['images'],
                           output_names=output_names,
                           dynamic_axes=dynamic_axes)
 
         # Checks
+        onnx_model = onnx.load(fname)  # load onnx model
         onnx_model = onnx.load(fname)  # load onnx model
         onnx.checker.check_model(onnx_model)  # check onnx model
 
