@@ -27,9 +27,13 @@ def check_integration():
         res = preprocess_func()
 
     for train in res:
-        train = res[2]
+        train = res[1]
         for image_index in range(1000):
             # image_index = 102
+            meta_dat = metadata_image_path(image_index, train)
+            # targt_path = '/mnt/Data/hanoch/tir_frames_rois/yolo7_tir_data_all/TIR11_V50_JUL21_Test38D_2021_02_03_16_11_48_FS_210_XGA_3062_5512_LIEL_center_roi_210_3621.tiff'
+            # if targt_path != meta_dat['path']:
+            #     continue
             inpt = input_encoder(image_index, train)[None, ...]
             if 1:
                 cuda = [True if torch.cuda.is_available() else False][0]
@@ -52,7 +56,6 @@ def check_integration():
                 # print(train.data['dataset1'].label_files[0])
                 # out2 = train.data['dataset1'].__getitem__(0)
                 image_stats_real = image_stats(gt)
-                meta_dat = metadata_image_path(image_index, train)
                 loss = custom_loss(prediction, gt)
                 acc = accuracy_f1(prediction, gt)
 

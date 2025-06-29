@@ -583,8 +583,9 @@ def train(hyp, opt, device, tb_writer=None):
                     ns = [math.ceil(x * sf / gs) * gs for x in imgs.shape[2:]]  # new shape (stretched to gs-multiple)
                     imgs = F.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
-            with amp.autocast(enabled=cuda): # to decrease GPU VRAM turn off OTA loss see what happen HT TODO ::
+            # with amp.autocast(enabled=cuda): # to decrease GPU VRAM turn off OTA loss see what happen HT TODO ::
             # with amp.autocast(enabled=(cuda and opt.amp)):
+            with amp.autocast(enabled=(cuda)):
                 pred = model(imgs)  # forward [B, C, W,H, [bbox[4], objectness[1], class-conf[nc]]]
                 if 'loss_ota' not in hyp or hyp['loss_ota'] == 1:
                     loss, loss_items = compute_loss_ota(pred, targets.to(device), imgs)  # loss scaled by batch_size

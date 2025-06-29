@@ -29,6 +29,8 @@ from YOLOv7onnx import yolobbox_to_xyxy
 from code_loader.inner_leap_binder.leapbinder_decorators import tensorleap_preprocess, tensorleap_input_encoder, \
     tensorleap_gt_encoder, tensorleap_custom_visualizer, tensorleap_custom_loss, tensorleap_metadata, tensorleap_custom_metric
 
+from code_loader.contract.enums import MetricDirection
+
 nc = 1 if CONFIG['SINGLE_CLS'] else int(data_dict['nc'])  # number of classes
 img_shape = 640
 print(3)
@@ -399,11 +401,11 @@ def transform_conf(pred):
     return pred
 
 # @tensorleap_custom_loss('od_loss')
-def custom_loss_dummy(predictions, targets):
-    err_str = f"-------  custome loss  !!!!!!{predictions.shape}"
-    leaplogger.warning(err_str)
-
-    return np.array(0).astype('float32')
+# def custom_loss_dummy(predictions, targets):
+#     err_str = f"-------  custome loss  !!!!!!{predictions.shape}"
+#     leaplogger.warning(err_str)
+#
+#     return np.array(0).astype('float32')
 
 @tensorleap_custom_loss('od_loss')
 def custom_loss(predictions, targets):
@@ -524,8 +526,8 @@ def pred_visualizer(pred, img):
     #                           conf_thres=CONFIG['NMS']['CONF_THRESH'],
     #                           iou_thres=CONFIG['NMS']['IOU_THRESH'], multi_label=True)[0].numpy()
     if any(pred[0, :, 6] > 0):
-        pred_ = pred[0, pred[0, :, 6] > 0][0]
-        pred_ = pred_[1:][None,...]
+        pred_ = pred[0, pred[0, :, 6] > 0,:]
+        pred_ = pred_[:, 1:]
         pred_[:, :4] = pred_[:, :4] / CONFIG['IMGSZ']
         new_order = [0, 1, 2, 3, 5, 4]
         pred_reshaped = pred_[:,new_order]
@@ -581,7 +583,7 @@ def metadata_image_path_wishful(idx: int, preprocess: PreprocessResponse) -> dic
     response = {'path': path, 'sensor_type':sensor_type, 'time_in_day': time_in_day, 'weather_condition': weather_condition}
     return response
 
-@tensorleap_custom_metric('accuracy_f1')
+@tensorleap_custom_metric('accuracy_f1', direction=MetricDirection.Upward)
 def accuracy_f1(predictions, targets, conf_th=0.1):
 
     predictions = predictions[0, :, :]

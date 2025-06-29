@@ -516,10 +516,7 @@ class ComputeLoss:
                 alpha = loss_weight # Overide the default from the paper
 
             if multi_label_asymetric_focal_loss:
-                xCEcls, BCEobj = (AsymmetricLoss(xCEcls, g,
-                                            alpha=alpha.to(device),
-                                            multi_class_no_multi_label=self.multi_class_no_multi_label,
-                                            multi_label_asymetric_focal_loss=self.multi_label_asymetric_focal_loss),
+                xCEcls, BCEobj = (AsymmetricLoss(),
                                   FocalLoss(BCEobj, g))
             else:
                 xCEcls, BCEobj = (FocalLoss(xCEcls, g,
@@ -555,6 +552,9 @@ class ComputeLoss:
                 pwh = (ps[:, 2:4].sigmoid() * 2) ** 2 * anchors[i]
                 pbox = torch.cat((pxy, pwh), 1)  # predicted box
                 iou = bbox_iou(pbox.T, tbox[i], x1y1x2y2=False, CIoU=True)  # iou(prediction, target)
+                # if torch.abs(iou.min())<=1e-6: # otherwise implicitily telling that FN with IOU=0 goes to 0 loss which is un-desireable. CIOU can be negative =>Yes, the CIoU loss can have a value greater than 1 — and that is reasonable and expected in some cases, especially when the predicted box is far from the ground truth in location or shape.
+                #    print('low iou', iou.min())
+
                 lbox += (1.0 - iou).mean()  # iou loss
 
                 # Objectness  # # gr iou loss ratio (obj_loss = 1.0 or iou)

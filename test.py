@@ -85,9 +85,26 @@ def test(data,
         model = attempt_load(weights, map_location=device)  # load FP32 model
         gs = max(int(model.stride.max()), 32)  # grid size (max stride)
         imgsz = check_img_size(imgsz, s=gs)  # check img_size
-        
+
+        if isinstance(compute_loss, bool):  # ovcerside in case injected explicitly from training by OHEM
+            if compute_loss:
+                trace= False
         if trace:
             model = TracedModel(model, device, imgsz, opt.input_channels)
+
+    if isinstance(compute_loss, bool): # otherside in case injected explicitly from training by OHEM
+        if compute_loss:
+            from utils.loss import ComputeLoss, ComputeLossOTA
+            hyp.update({'cls_pw': 1.0})
+            hyp.update({'fl_gamma': 1.5})
+            hyp.update({'obj_pw': 1.0})
+            hyp.update({'anchor_t': 4.0})
+            hyp.update({'cls': 0.5})
+            hyp.update({'box': 0.05})
+            hyp.update({'obj': 1.0})
+
+            model.hyp = hyp
+            compute_loss = ComputeLoss(device=device, model=model)
 
     #torch.backends.cudnn.benchmark = True  ##uses the inbuilt cudnn auto-tuner to find the fastest convolution algorithms. -
     # Half
@@ -910,6 +927,11 @@ if __name__ == '__main__':
 
     model_name = str(opt.weights)[str(opt.weights).find('yolo'):].split('/')[0]
 
+    compute_loss = False
+    compute_loss_for_test = False # True
+    if compute_loss_for_test:
+        compute_loss=True
+
     if opt.task in ('train', 'val', 'test'):  # run normally
         test(opt.data,
              opt.weights,
@@ -928,7 +950,8 @@ if __name__ == '__main__':
              v5_metric=opt.v5_metric,
              hyp=hyp,
              embed_analyse=opt.embed_analyse,
-             model_name=model_name)
+             model_name=model_name,
+             compute_loss=compute_loss)
 
     elif opt.task == 'speed':  # speed benchmarks
         for w in opt.weights:
