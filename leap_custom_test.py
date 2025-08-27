@@ -1,6 +1,10 @@
 from leap_binder import (preprocess_func, input_encoder, gt_encoder, custom_loss,
                          pred_visualizer, gt_visualizer, metadata_image_path,
-                         image_stats, preprocess_func_no_csv, accuracy_f1)
+                         image_stats, preprocess_func_no_csv, accuracy_f1,
+                         preprocess_unlabeled_func_leap)
+
+from code_loader.contract.datasetclasses import DataStateType
+
 # import tensorflow as tf
 import numpy as np
 from utils.general import non_max_suppression
@@ -26,9 +30,11 @@ def check_integration():
     else:
         res = preprocess_func()
 
+    res.append(preprocess_unlabeled_func_leap())
+
     for train in res:
-        train = res[1]
-        for image_index in range(1000):
+        train = res[-1]
+        for image_index in range(10):
             # image_index = 102
             meta_dat = metadata_image_path(image_index, train)
             # targt_path = '/mnt/Data/hanoch/tir_frames_rois/yolo7_tir_data_all/TIR11_V50_JUL21_Test38D_2021_02_03_16_11_48_FS_210_XGA_3062_5512_LIEL_center_roi_210_3621.tiff'
@@ -52,14 +58,15 @@ def check_integration():
                 inname = [i.name for i in session.get_inputs()]
                 inp = {inname[0]: inpt}
                 prediction = session.run(outname, inp)[0]
-                gt = gt_encoder(image_index, train)[None, ...]
+                if train.state != DataStateType.unlabeled:
+                    gt = gt_encoder(image_index, train)[None, ...]
                 # print(train.data['dataset1'].label_files[0])
                 # out2 = train.data['dataset1'].__getitem__(0)
-                image_stats_real = image_stats(gt)
-                loss = custom_loss(prediction, gt)
-                acc = accuracy_f1(prediction, gt)
+                    image_stats_real = image_stats(gt)
+                    loss = custom_loss(prediction, gt)
+                    acc = accuracy_f1(prediction, gt)
 
-                gt_img_with_bbox = gt_visualizer(gt, inpt)
+                    gt_img_with_bbox = gt_visualizer(gt, inpt)
                 img_with_bbox = pred_visualizer(prediction, inpt)
 
 

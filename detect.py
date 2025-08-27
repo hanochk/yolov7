@@ -12,7 +12,7 @@ import tifffile
 import copy
 import numpy as np
 from models.experimental import attempt_load
-from utils.datasets import LoadStreams, LoadImages, scaling_image
+from utils.datasets import LoadStreams, LoadImages, scaling_image, LoadImagesAndLabels
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
     scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path
 from utils.plots import plot_one_box
@@ -64,6 +64,12 @@ def detect(save_img=False):
                              tir_channel_expansion=opt.tir_channel_expansion,
                              rel_path_for_list_files=opt.rel_path_for_list_files)
 
+        dataset_loader = torch.utils.data.DataLoader(dataset,
+                            batch_size=1,
+                            pin_memory=True,
+                                              collate_fn=dataset.unlabeled_collate_fn)
+
+
     # Get names and colors
     names = model.module.names if hasattr(model, 'module') else model.names
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
@@ -75,7 +81,7 @@ def detect(save_img=False):
     old_img_b = 1
 
     t0 = time.time()
-    for path, img, im0s, vid_cap in dataset:
+    for path, img, im0s, vid_cap in dataset_loader:
 
         if os.path.basename(path).split('.')[1] == 'tiff': # im0s only for plotting version
             im0s = np.repeat(im0s[ :, :, np.newaxis], 3, axis=2) # convert GL to RGB by replication
@@ -252,7 +258,7 @@ python -u ./yolov7/detect.py --weights ./yolov7/yolov7.pt --conf 0.25 --img-size
 
 --weights /mnt/Data/hanoch/runs/train/yolov7999/weights/best.pt --conf 0.25 --img-size 640 --device 0 --save-txt --norm-type single_image_percentile_0_1 --source /home/hanoch/projects/tir_frames_rois/fog/28_02_2019_16_05_01[1]_04783.tiff
 
-
+--weights /mnt/Data/hanoch/runs/train/yolov7999/weights/best.pt --img-size 640 --device 0 --save-txt --norm-type single_image_percentile_0_1 --source yolov7/tir_od/fog_data_set.txt --conf 0.65
 
 
 YOLO model
@@ -260,4 +266,10 @@ YOLO model
 
 --weights /mnt/Data/hanoch/runs/train/yolov7575/weights/best.pt --conf 0.01 --img-size 640 --input-channels 1 --device 0 --save-txt --norm-type single_image_percentile_0_1 --source /home/hanoch/projects/tir_frames_rois/tir_tiff_tiff_files/TIR8_V50_Test19G_Jul20_2018-12-06_13-39-17_FS_50F_0114_6368_ROTEM_right_roi_50_345.tiff
 
+Failed training-set locomotiver
+--weights /mnt/Data/hanoch/runs/train/yolov71351/weights/epoch_049.pt --img-size 640 --device 0 --save-txt --norm-type single_image_percentile_0_1 --conf 0.65 --source /mnt/Data/hanoch/tir_frames_rois/yolo7_tir_data_all/TIR28_V90_JAN25_Test52C_2022_10_26_21_01_06_FS_50_XGA_0001_2898_MICHAEL_center_roi_50_1318.tiff 
+
+
+# unlabeled data
+--weights /mnt/Data/hanoch/runs/train/yolov71351/weights/epoch_049.pt --img-size 640 --device 0 --save-txt --norm-type single_image_percentile_0_1 --source yolov7/tir_od/unlabeled_210_data_set.txt --conf 0.65 --rel-path-for-list-files /mnt/Data/hanoch/tir_frames_rois/unlabeled
 """

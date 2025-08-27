@@ -117,7 +117,7 @@ def output_to_target(output):
 
 
 def plot_images(images, targets, paths=None, fname='images.jpg',
-                names=None, max_size=640, max_subplots=16):
+                names=None, max_size=640, max_subplots=16, clml_logger=None):
     # Plot image grid with labels
 
     if isinstance(images, torch.Tensor):
@@ -203,6 +203,14 @@ def plot_images(images, targets, paths=None, fname='images.jpg',
         mosaic = cv2.resize(mosaic, (int(ns * w * r), int(ns * h * r)), interpolation=cv2.INTER_AREA)
         # cv2.imwrite(fname, cv2.cvtColor(mosaic, cv2.COLOR_BGR2RGB))  # cv2 save
         Image.fromarray(mosaic).save(fname)  # PIL save
+        if clml_logger is not None:
+            clml_logger.report_image(
+                "image",
+                "image PIL",
+                iteration=0,
+                image=mosaic
+            )
+
     return mosaic
 
 

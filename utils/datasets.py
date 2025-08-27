@@ -265,13 +265,17 @@ class _RepeatSampler(object):
             yield from iter(self.sampler)
 
 
-class LoadImages:  # for inference
+class LoadImages(Dataset):  # for inference
     def __init__(self, path, img_size=640, stride=32,
                  scaling_type='standardization', img_percentile_removal=0.3, beta=0.3, input_channels=3,
                  tir_channel_expansion=False, no_tir_signal=False,
-                 rel_path_for_list_files=''):
+                 rel_path_for_list_files='', detection_ordering=True):
 
+        self.detection_ordering = detection_ordering
+        self.count = 0
         p = str(Path(path).absolute())  # os-agnostic absolute path
+        print('p',p)
+        print('rel_path_for_list_files', rel_path_for_list_files)
         if '*' in p:
             files = sorted(glob.glob(p, recursive=True))  # glob
         elif os.path.isdir(p):
@@ -343,8 +347,17 @@ class LoadImages:  # for inference
     def __iter__(self):
         self.count = 0
         return self
+    @staticmethod
+    def unlabeled_collate_fn(batch):
+        path, img, im0s, vid_cap = zip(*batch)  # transposed
+        return path[0], np.array(img[0]), np.array(im0s[0]), np.array([p for p in vid_cap])
 
-    def __next__(self):
+    @staticmethod
+    def unlabeled_tleap_collate_fn(batch):
+        path, img, im0s, vid_cap = zip(*batch)  # transposed
+        return path[0], torch.tensor(img[0]), torch.tensor(im0s[0]), np.array([p for p in vid_cap])
+
+    def __getitem__(self, index_dummy):
         if self.count == self.nf:
             raise StopIteration
         path = self.files[self.count]
@@ -434,8 +447,10 @@ class LoadImages:  # for inference
 
         img = np.ascontiguousarray(img)
 
-
-        return path, img, img0, self.cap
+        if self.detection_ordering: # unlabeled default ordering
+            return path, img, img0, self.cap
+        else: # assimilate the same ordering as dataloader of labeled
+            return img, 0, path, 0
 
     def new_video(self, path):
         self.frame = 0
@@ -689,7 +704,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             for x in self.labels:
                 x[:, 0] = 0
 
-        if nm > 0:
+        if nm > 0: # Caveats when removing images bbox-less hence no hard negative examples in it
             print(100*'/*/')
             print('Remove missing annotations file avoiding unlabeled images that would considered as BG. Before', len(self.labels))
         for ix  in range(len(self.labels) - 1, -1, -1): # safe remove by reverrse iteration #enumerate(self.labels):

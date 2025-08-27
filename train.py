@@ -49,11 +49,10 @@ from utils.loss import ComputeLoss, ComputeLossOTA
 from utils.plots import plot_images, plot_results, plot_evolution, append_to_txt
 from utils.torch_utils import ModelEMA, select_device, intersect_dicts, torch_distributed_zero_first, is_parallel
 from utils.wandb_logging.wandb_utils import WandbLogger, check_wandb_resume
-
+from clearml import Task, Logger
 logger = logging.getLogger(__name__)
 clear_ml = True
 
-from clearml import Task
 
 if clear_ml:  # clearml support
 
@@ -132,7 +131,7 @@ def compare_models(model1, model2):
     # print("No differences found in any layer.")
 
 
-def train(hyp, opt, device, tb_writer=None):
+def train(hyp, opt, device, tb_writer=None, clml_logger=None):
     logger.info(colorstr('hyperparameters: ') + ', '.join(f'{k}={v}' for k, v in hyp.items()))
     save_dir, epochs, batch_size, total_batch_size, weights, rank, freeze = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank, opt.freeze
@@ -647,7 +646,7 @@ def train(hyp, opt, device, tb_writer=None):
                 # Plot
                 if ((plots and ni < 100) or enable_cont_saving_images) and not(stop_train_plot_image):
                     f = save_dir / f'train_batch{ni}.jpg'  # filename
-                    Thread(target=plot_images, args=(imgs, targets, paths, f), daemon=True).start()
+                    Thread(target=plot_images, args=(imgs, targets, paths, f, None, 640, 16, clml_logger), daemon=True).start()
                     # if tb_writer:
                     #     tb_writer.add_image(f, result, dataformats='HWC', global_step=epoch)
                     #     tb_writer.add_graph(torch.jit.trace(model, imgs, strict=False), [])  # add model graph
@@ -930,6 +929,8 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     # Only for clearML env
 
+    clml_logger = Logger.current_logger()
+
     if opt.multi_class_no_multi_label and opt.multi_label_asymetric_focal_loss:
         raise ValueError('ASL is for multi label rather than multi class')
 
@@ -1009,7 +1010,7 @@ if __name__ == '__main__':
             prefix = colorstr('tensorboard: ')
             logger.info(f"{prefix}Start with 'tensorboard --logdir {opt.project}', view at http://localhost:6006/")
             tb_writer = SummaryWriter(opt.save_dir)  # Tensorboard
-        train(hyp, opt, device, tb_writer)
+        train(hyp, opt, device, tb_writer, clml_logger)
 
     # Evolve hyperparameters (optional)
     else:

@@ -25,6 +25,7 @@ import pickle
 import os
 from utils.general import xywh2xyxy
 from collections import defaultdict
+
 def compute_iou(box1, box2):
     x1 = max(box1[0], box2[0])
     y1 = max(box1[1], box2[1])

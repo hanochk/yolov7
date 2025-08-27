@@ -29,7 +29,12 @@ from YOLOv7onnx import yolobbox_to_xyxy
 from code_loader.inner_leap_binder.leapbinder_decorators import tensorleap_preprocess, tensorleap_input_encoder, \
     tensorleap_gt_encoder, tensorleap_custom_visualizer, tensorleap_custom_loss, tensorleap_metadata, tensorleap_custom_metric
 
+from code_loader.contract.datasetclasses import DataStateType
+
+from code_loader.inner_leap_binder.leapbinder_decorators import *
+
 from code_loader.contract.enums import MetricDirection
+from utils.datasets import LoadImages
 
 nc = 1 if CONFIG['SINGLE_CLS'] else int(data_dict['nc'])  # number of classes
 img_shape = 640
@@ -276,7 +281,7 @@ def compute_yolo_cross_entropy_loss(predictions, targets, iou_threshold=0.5,
 
     return total_loss, loss_components
 
-csv_data_path = 'tir_tiff_seq_png_3_class_fixed_whether_copied_dataset_label_tleap.xlsx'
+csv_data_path = 'tir_tiff_seq_png_3_class_fixed_whether_copied_dataset_7l_tleap.xlsx'
 def preprocess_func() -> List[PreprocessResponse]:
     # Hyperparameters
     train_path = data_dict['train']
@@ -320,6 +325,7 @@ def preprocess_func_no_csv() -> List[PreprocessResponse]:
     train_path = data_dict['train']
     val_path = data_dict['val']
     test_path = data_test_dict['test']
+
     train_dataloader, dataset = create_dataloader(train_path, CONFIG['IMGSZ'], 1, CONFIG['GS'],
                                             Namespace(single_cls=CONFIG['SINGLE_CLS'], norm_type='single_image_percentile_0_1',
                                                       input_channels=1, tir_channel_expansion=False,
@@ -347,17 +353,44 @@ def preprocess_func_no_csv() -> List[PreprocessResponse]:
     # Generate a PreprocessResponse for each data slice, to later be read by the encoders.
     # The length of each data slice is provided, along with the data dictionary.
     # In this example we pass `images` and `labels` that later are encoded into the inputs and outputs
-    train = PreprocessResponse(length=train_dataloader.dataset.__len__(), data={'dataset1': train_dataloader.dataset})
-    val = PreprocessResponse(length=val_dataloader.dataset.__len__(), data={'dataset1': val_dataloader.dataset})
-    test = PreprocessResponse(length=test_dataloader.dataset.__len__(), data={'dataset1': test_dataloader.dataset})
+    train = PreprocessResponse(length=train_dataloader.dataset.__len__(), data={'dataset1': train_dataloader.dataset}, state=DataStateType.training)
+    val = PreprocessResponse(length=val_dataloader.dataset.__len__(), data={'dataset1': val_dataloader.dataset}, state=DataStateType.validation)
+    test = PreprocessResponse(length=test_dataloader.dataset.__len__(), data={'dataset1': test_dataloader.dataset}, state=DataStateType.test)
     response = [train, val, test]
     return response
+
+@tensorleap_unlabeled_preprocess()
+def preprocess_unlabeled_func_leap() -> List[PreprocessResponse]:
+    unlabeled_dataset = LoadImages('/mnt/Data/hanoch/tir_frames_rois/unlabeled_210_data_set_tleap.txt',#CONFIG['UNLABELED_DATASET'],
+                                   CONFIG['IMGSZ_TEST'], CONFIG['GS'], \
+                                  scaling_type='single_image_percentile_0_1',
+                                             input_channels=1, tir_channel_expansion=False, no_tir_signal=False,
+                                             rel_path_for_list_files=CONFIG['rel_path_for_list_files'], detection_ordering=False)
+
+    unlabeled_loader = torch.utils.data.DataLoader(unlabeled_dataset,
+                                                 batch_size=1,
+                                                 pin_memory=True,
+                                                 collate_fn=unlabeled_dataset.unlabeled_tleap_collate_fn)
+
+    # unlabeled_test = PreprocessResponse(data=test_unlabeled_dataset,
+    #                                     state=DataStateType.unlabeled,
+    #                                     sample_ids=test_mapped_strings, sample_id_type=str)
+    #
+    unlabeled = PreprocessResponse(length=len(unlabeled_loader.dataset), data={'dataset1':unlabeled_loader.dataset}, state=DataStateType.unlabeled)
+    print('Done...preprocess_unlabeled_func_leap')
+
+    return unlabeled
 
 # Input encoder fetches the image with the index `idx` from the `images` array set in
 # the PreprocessResponse data. Returns a numpy array containing the sample's image.
 @tensorleap_input_encoder('image')
 def input_encoder(idx: int, preprocess: PreprocessResponse) -> np.ndarray:
-    return preprocess.data['dataset1'][idx][0].permute((1, 2, 0)).numpy().astype('float32')
+    image = preprocess.data['dataset1'][idx][0]
+    if isinstance(image, torch.Tensor):
+        return image.permute((1, 2, 0)).numpy().astype('float32')
+    else:
+        return image.transpose((1, 2, 0)).astype('float32')
+
 
 
 # Ground truth encoder fetches the label with the index `idx` from the `labels` array set in
@@ -642,6 +675,9 @@ def image_stats(targets : np.ndarray) -> dict:
 # (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s))
 # Dataset binding functions to bind the functions above to the `Dataset Instance`.
 leap_binder.add_prediction(name='classes', labels=['X', 'Y', 'W', ' H', ' Conf'] + data_dict['names'])
+
+if __name__ == '__main__':
+    leap_binder.check()
 
 
 #
