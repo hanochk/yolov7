@@ -278,7 +278,7 @@ def test(data,
             path = Path(paths[si])
             seen += 1
 
-            # No predictions in the image but only GT
+            # No predictions in the image but only GT = >FN
             if len(pred) == 0:
                 if nl:
                     if dataloader.dataset.use_csv_meta_data_file: # cases where no predictions but still GT are
@@ -315,7 +315,7 @@ def test(data,
 
                         # print('Cars in image', (np.array(tcls)==0).astype('int').sum().item())
                         # all_cars.append((np.array(tcls)==0).astype('int').sum().item()) # all_cars
-
+                        # only update GTs : gt_per_range_bins
                         for gt_lbl, rng_ in zip(labels[:,0], gt_range):
                             if rng_ < n_bins_of100m :
                                 gt_per_range_bins[sensor_type][int(rng_.item())].append(int(gt_lbl.item()))  # add to each range bin GT the GT counts
@@ -323,6 +323,8 @@ def test(data,
                             else:
                                 print('target out of 2000m', gt_lbl, path)
                         exec([x for x in sensor_type_vars if str(sensor_type) in x][0] + '.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls))')
+                        #         However _with_range holds ranges of pred = > dummt prediction
+                        obj_range_m = torch.Tensor()
                         exec([x+'_with_range' for x in sensor_type_vars if str(sensor_type) in x][0] + '.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls, obj_range_m, pred[:, 5].shape[0]*[str(path)]))') # path is replicated to match each prediction TP/FP in the image
 
                     stats.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls))    #niou for COCO 0.5:0.05:1
